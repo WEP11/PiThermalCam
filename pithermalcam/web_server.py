@@ -128,7 +128,7 @@ def generate():
 		# yield the output frame in the byte format
 		yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + bytearray(encodedImage) + b'\r\n')
 
-def start_server(output_folder:str = '/home/pi/pithermalcam/saved_snapshots/'):
+def start_server(output_folder = '/home/pi/pithermalcam/saved_snapshots/'):
 	global thermcam
 	# initialize the video stream and allow the camera sensor to warmup
 	thermcam = pithermalcam(output_folder=output_folder)
@@ -142,7 +142,7 @@ def start_server(output_folder:str = '/home/pi/pithermalcam/saved_snapshots/'):
 	ip=get_ip_address()
 	port=8000
 
-	print(f'Server can be found at {ip}:{port}')
+	print('Server can be found at {}:{}'.format(ip,port))
 
 	# start the flask app
 	app.run(host=ip, port=port, debug=False,threaded=True, use_reloader=False)
