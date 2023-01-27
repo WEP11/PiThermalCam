@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 class pithermalcam:
     # See https://gitlab.com/cvejarano-oss/cmapy/-/blob/master/docs/colorize_all_examples.md to for options that can be put in this list
-    _colormap_list=['jet','bwr','seismic','coolwarm','PiYG_r','tab10','tab20','gnuplot2','brg']
+    _colormap_list=['jet','bwr','seismic','coolwarm','PiYG_r','tab10','tab20','gnuplot2','brg',
+    'viridis','plasma','nipy_spectral','ocean_r']
     _interpolation_list =[cv2.INTER_NEAREST,cv2.INTER_LINEAR,cv2.INTER_AREA,cv2.INTER_CUBIC,cv2.INTER_LANCZOS4,5,6]
     _interpolation_list_name = ['Nearest','Inter Linear','Inter Area','Inter Cubic','Inter Lanczos4','Pure Scipy', 'Scipy/CV2 Mixed']
     _current_frame_processed=False  # Tracks if the current processed image matches the current raw image
@@ -35,8 +36,8 @@ class pithermalcam:
     _displaying_onscreen=False
     _exit_requested=False
 
-    def __init__(self,use_f:bool = True, filter_image:bool = False, image_width:int=1200, 
-                image_height:int=900, output_folder:str = '/home/pi/pithermalcam/saved_snapshots/'):
+    def __init__(self,use_f = True, filter_image = False, image_width=1200, 
+                image_height=900, output_folder = '/home/pi/pithermalcam/saved_snapshots/'):
         self.use_f=use_f
         self.filter_image=filter_image
         self.image_width=image_width
@@ -60,7 +61,7 @@ class pithermalcam:
         self.mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_8_HZ  # set refresh rate
         time.sleep(0.1)
 
-    def _c_to_f(self,temp:float):
+    def _c_to_f(self,temp):
         """ Convert temperature from C to F """
         return ((9.0/5.0)*temp+32.0)
 
@@ -86,6 +87,7 @@ class pithermalcam:
         self._raw_image = np.zeros((24*32,))
         try:
             self.mlx.getFrame(self._raw_image)  # read mlx90640
+            self._raw_image[self._raw_image < -200] = self._raw_image[0]
             self._temp_min = np.min(self._raw_image)
             self._temp_max = np.max(self._raw_image)
             self._raw_image=self._temps_to_rescaled_uints(self._raw_image,self._temp_min,self._temp_max)
@@ -122,9 +124,24 @@ class pithermalcam:
         if self.use_f:
             temp_min=self._c_to_f(self._temp_min)
             temp_max=self._c_to_f(self._temp_max)
-            text = f'Tmin={temp_min:+.1f}F - Tmax={temp_max:+.1f}F - FPS={1/(time.time() - self._t0):.1f} - Interpolation: {self._interpolation_list_name[self._interpolation_index]} - Colormap: {self._colormap_list[self._colormap_index]} - Filtered: {self.filter_image}'
+            #text = f'Tmin={temp_min:+.1f}F - Tmax={temp_max:+.1f}F - FPS={1/(time.time() - self._t0):.1f} - Interpolation: {self._interpolation_list_name[self._interpolation_index]} - Colormap: {self._colormap_list[self._colormap_index]} - Filtered: {self.filter_image}'
+            text = 'Tmin={}F - Tmax={}F - FPS={} - Interpolation: {} - Colormap: {} - Filtered: {}'.format(
+                self._temp_min,
+                self._temp_max,
+                time.time()-self._t0,
+                self._interpolation_list_name[self._interpolation_index],
+                self._colormap_list[self._colormap_index],
+                self.filter_image)
         else:
-            text = f'Tmin={self._temp_min:+.1f}C - Tmax={self._temp_max:+.1f}C - FPS={1/(time.time() - self._t0):.1f} - Interpolation: {self._interpolation_list_name[self._interpolation_index]} - Colormap: {self._colormap_list[self._colormap_index]} - Filtered: {self.filter_image}'
+            #text = f'Tmin={self._temp_min:+.1f}C - Tmax={self._temp_max:+.1f}C - FPS={1/(time.time() - self._t0):.1f} - Interpolation: {self._interpolation_list_name[self._interpolation_index]} - Colormap: {self._colormap_list[self._colormap_index]} - Filtered: {self.filter_image}'
+            text = 'Tmin={}C - Tmax={}C - FPS={} - Interpolation: {} - Colormap: {} - Filtered: {}'.format(
+                self._temp_min,
+                self._temp_max,
+                time.time()-self._t0,
+                self._interpolation_list_name[self._interpolation_index],
+                self._colormap_list[self._colormap_index],
+                self.filter_image)
+
         cv2.putText(self._image, text, (30, 18), cv2.FONT_HERSHEY_SIMPLEX, .4, (255, 255, 255), 1)
         self._t0 = time.time()  # Update time to this pull
 
@@ -200,7 +217,7 @@ class pithermalcam:
         self._show_processed_image()
         self._set_click_keyboard_events()
 
-    def change_colormap(self, forward:bool = True):
+    def change_colormap(self, forward = True):
         """Cycle colormap. Forward by default, backwards if param set to false."""
         if forward:
             self._colormap_index+=1
@@ -211,7 +228,7 @@ class pithermalcam:
             if self._colormap_index<0:
                 self._colormap_index=len(self._colormap_list)-1
 
-    def change_interpolation(self, forward:bool = True):
+    def change_interpolation(self, forward = True):
         """Cycle interpolation. Forward by default, backwards if param set to false."""
         if forward:
             self._interpolation_index+=1
