@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class pithermalcam:
     # See https://gitlab.com/cvejarano-oss/cmapy/-/blob/master/docs/colorize_all_examples.md to for options that can be put in this list
-    _colormap_list=['jet','bwr','seismic','coolwarm','PiYG_r','tab10','tab20','gnuplot2','brg',
+    _colormap_list=['plasma','jet','bwr','seismic','coolwarm','PiYG_r','tab10','tab20','gnuplot2','brg',
     'viridis','plasma','nipy_spectral','ocean_r']
     _interpolation_list =[cv2.INTER_NEAREST,cv2.INTER_LINEAR,cv2.INTER_AREA,cv2.INTER_CUBIC,cv2.INTER_LANCZOS4,5,6]
     _interpolation_list_name = ['Nearest','Inter Linear','Inter Area','Inter Cubic','Inter Lanczos4','Pure Scipy', 'Scipy/CV2 Mixed']
@@ -87,7 +87,10 @@ class pithermalcam:
         self._raw_image = np.zeros((24*32,))
         try:
             self.mlx.getFrame(self._raw_image)  # read mlx90640
-            self._raw_image[self._raw_image < -200] = self._raw_image[0]
+
+            # Remove bad pixels
+            self._raw_image[self._raw_image < -200] = self._raw_image[self._raw_image > -200].mean()
+
             self._temp_min = np.min(self._raw_image)
             self._temp_max = np.max(self._raw_image)
             self._raw_image=self._temps_to_rescaled_uints(self._raw_image,self._temp_min,self._temp_max)
@@ -114,7 +117,7 @@ class pithermalcam:
             self._image = cv2.resize(self._image, (800,600), interpolation=cv2.INTER_CUBIC)
         else:
             self._image = cv2.applyColorMap(self._raw_image, cmapy.cmap(self._colormap_list[self._colormap_index]))
-            self._image = cv2.resize(self._image, (800,600), interpolation=self._interpolation_list[self._interpolation_index])
+            self._image = cv2.resize(self._image, (1024,768), interpolation=self._interpolation_list[self._interpolation_index])
         self._image = cv2.flip(self._image, 1)
         if self.filter_image:
             self._image=cv2.bilateralFilter(self._image,15,80,80)
@@ -125,16 +128,16 @@ class pithermalcam:
             temp_min=self._c_to_f(self._temp_min)
             temp_max=self._c_to_f(self._temp_max)
             #text = f'Tmin={temp_min:+.1f}F - Tmax={temp_max:+.1f}F - FPS={1/(time.time() - self._t0):.1f} - Interpolation: {self._interpolation_list_name[self._interpolation_index]} - Colormap: {self._colormap_list[self._colormap_index]} - Filtered: {self.filter_image}'
-            text = 'Tmin={}F - Tmax={}F - FPS={} - Interpolation: {} - Colormap: {} - Filtered: {}'.format(
-                self._temp_min,
-                self._temp_max,
+            text = 'Tmin={:.1f}F - Tmax={:.1f}F - FPS={:.1f} - Interpolation: {} - Colormap: {} - Filtered: {}'.format(
+                temp_min,
+                temp_max,
                 time.time()-self._t0,
                 self._interpolation_list_name[self._interpolation_index],
                 self._colormap_list[self._colormap_index],
                 self.filter_image)
         else:
             #text = f'Tmin={self._temp_min:+.1f}C - Tmax={self._temp_max:+.1f}C - FPS={1/(time.time() - self._t0):.1f} - Interpolation: {self._interpolation_list_name[self._interpolation_index]} - Colormap: {self._colormap_list[self._colormap_index]} - Filtered: {self.filter_image}'
-            text = 'Tmin={}C - Tmax={}C - FPS={} - Interpolation: {} - Colormap: {} - Filtered: {}'.format(
+            text = 'Tmin={:.1f}C - Tmax={:.1f}C - FPS={:.1f} - Interpolation: {} - Colormap: {} - Filtered: {}'.format(
                 self._temp_min,
                 self._temp_max,
                 time.time()-self._t0,
